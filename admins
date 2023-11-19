@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EnhancedStorageETH {
+    address public owner;
+    mapping(address => bool) public admins;
+    mapping(address => string) public userData;
+    uint256 public creationTimestamp;
+    bool public isLocked;
+
+    event DataStored(address indexed user, string data);
+    event DataDeleted(address indexed deleter, string data);
+
+    modifier onlyOwnerOrAdmin() {
+        require(msg.sender == owner || admins[msg.sender], "Not authorized");
+        _;
+    }
+
+    modifier notLocked() {
+        require(!isLocked, "Contract is locked and data cannot be modified");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+        admins[msg.sender] = true;
+        creationTimestamp = block.timestamp;
+        isLocked = false;
+    }
+
+    function set(string memory newData) external onlyOwnerOrAdmin notLocked {
+        userData[msg.sender] = newData;
+        emit DataStored(msg.sender, newData);
+    }
+
+    function get(address user) external view returns (string memory) {
+        return userData[user];
+    }
+
+    function deleteData() external onlyOwner notLocked {
+        string memory deletedData = userData[msg.sender];
+        delete userData[msg.sender];
+        emit DataDeleted(msg.sender, deletedData);
+    }
+
+    function lockContract() external onlyOwner {
+        isLocked = true;
+    }
+
+    function unlockContract() external onlyOwner {
+        isLocked = false;
+    }
+
+    function addAdmin(address newAdmin) external onlyOwner {
+        admins[newAdmin] = true;
+    }
+
+    function removeAdmin(address adminToRemove) external onlyOwner {
+        require(adminToRemove != owner, "Cannot remove contract owner as admin");
+        admins[adminToRemove] = false;
+    }
+}
